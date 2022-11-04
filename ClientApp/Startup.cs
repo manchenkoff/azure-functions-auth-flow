@@ -1,9 +1,7 @@
 ﻿using ClientApp.Services;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Configurations;
-using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 
@@ -11,23 +9,6 @@ using System.Net.Http;
 
 namespace ClientApp
 {
-    internal class OpenApiConfigurationOptions : DefaultOpenApiConfigurationOptions
-    {
-        public override OpenApiInfo Info { get; set; } = new OpenApiInfo
-        {
-            Version = "1.0.0",
-            Title = "Test OpenAPI",
-            Description = "Server API specification",
-            License = new OpenApiLicense
-            {
-                Name = "MIT",
-                Url = new Uri("http://opensource.org/licenses/MIT"),
-            }
-        };
-
-        public override OpenApiVersionType OpenApiVersion { get; set; } = OpenApiVersionType.V3;
-    }
-
     public class Startup : FunctionsStartup
     {
         public override void Configure(IFunctionsHostBuilder builder)
@@ -35,21 +16,24 @@ namespace ClientApp
             builder
                 .Services
                 .AddHttpClient()
-                .AddScoped<ITokenService>(s => {
-                    var appId = Environment.GetEnvironmentVariable("AAD:AppId");
-                    var appSecret = Environment.GetEnvironmentVariable("AAD:AppSecret");
-                    var tenant = Environment.GetEnvironmentVariable("AAD:Tenant");
-                    var audience = Environment.GetEnvironmentVariable("AAD:Audience");
+                .AddScoped<ITokenProvider>(s => 
+                {
+                    var applicationId = Environment.GetEnvironmentVariable("AAD:AppId");
+                    var applicationSecret = Environment.GetEnvironmentVariable("AAD:AppKey");
+                    var tenant = Environment.GetEnvironmentVariable("AAD:TenantId");
+                    var audience = Environment.GetEnvironmentVariable("ServerApp:Audience");
 
-                    return new TokenService(appId, appSecret, tenant, audience);
+                    return new AadTokenProvider(applicationId, applicationSecret, tenant, audience);
                 })
-                .AddScoped<IUserService>(s =>
+                .AddScoped<IRemoteUser>(s =>
                 {
                     var httpClientFactory = s.GetService<IHttpClientFactory>();
-                    var tokenService = s.GetService<ITokenService>();
-                    var serviceBaseUrl = Environment.GetEnvironmentVariable("UserServiceURL");
+                    var tokenProvider = s.GetService<ITokenProvider>();
+                    var logger = s.GetService<ILogger>();
 
-                    return new UserService(httpClientFactory, tokenService, serviceBaseUrl);
+                    var remoteHost = Environment.GetEnvironmentVariable("ServerApp:RemoteHost");
+
+                    return new RemoteUser(httpClientFactory, remoteHost, tokenProvider);
                 });
         }
     }

@@ -2,7 +2,7 @@
   "profiles": {
     "ClientApp": {
       "commandName": "Project",
-      "commandLineArgs": "--port 7146",
+      "commandLineArgs": "--port 7100",
       "launchBrowser": false
     }
   }

@@ -2,7 +2,7 @@
   "profiles": {
     "ServerApp": {
       "commandName": "Project",
-      "commandLineArgs": "--port 7268",
+      "commandLineArgs": "--port 7200",
       "launchBrowser": false
     }
   }
